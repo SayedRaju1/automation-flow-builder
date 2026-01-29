@@ -1,11 +1,15 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { FlowEditor } from "@/components/flow-editor/FlowEditor";
-import { getAutomation } from "@/lib/api";
+import {
+  FlowEditor,
+  type FlowEditorRef,
+} from "@/components/flow-editor/FlowEditor";
+import { getAutomation, updateAutomation } from "@/lib/api";
 import { DEFAULT_EDGES, DEFAULT_NODES } from "@/lib/default-flow";
 import type { Node, Edge } from "reactflow";
 
@@ -38,7 +42,12 @@ function flowDataToNodesEdges(flowData: {
 
 export default function EditAutomationPage() {
   const params = useParams();
+  const router = useRouter();
+  const queryClient = useQueryClient();
+  const editorRef = useRef<FlowEditorRef>(null);
   const id = typeof params.id === "string" ? params.id : "";
+  const [name, setName] = useState("");
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const {
     data: automation,
@@ -48,6 +57,26 @@ export default function EditAutomationPage() {
     queryKey: ["automation", id],
     queryFn: () => getAutomation(id),
     enabled: !!id,
+  });
+
+  useEffect(() => {
+    if (automation?.name) setName(automation.name);
+  }, [automation?.name]);
+
+  const updateMutation = useMutation({
+    mutationFn: (payload: {
+      name: string;
+      flowData: { nodes: unknown[]; edges: unknown[] };
+    }) => updateAutomation(id, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["automations"] });
+      queryClient.invalidateQueries({ queryKey: ["automation", id] });
+      router.push("/");
+    },
+    onError: (err: unknown) => {
+      const e = err as { response?: { data?: { error?: string } } };
+      setSaveError(e.response?.data?.error ?? "Failed to update automation");
+    },
   });
 
   if (!id) {
@@ -85,14 +114,59 @@ export default function EditAutomationPage() {
       ? flowDataToNodesEdges(automation.flowData)
       : { nodes: DEFAULT_NODES, edges: DEFAULT_EDGES };
 
+  const handleSave = () => {
+    setSaveError(null);
+    const trimmed = name.trim();
+    if (!trimmed) {
+      setSaveError("Name is required");
+      return;
+    }
+    const flowData = editorRef.current?.getFlowData();
+    if (!flowData) return;
+    updateMutation.mutate({ name: trimmed, flowData });
+  };
+
   return (
     <div className="p-6">
       <h1 className="mb-4 text-2xl font-semibold">Edit automation</h1>
+      <div className="mb-4 flex flex-wrap items-end gap-4">
+        <div className="min-w-[200px]">
+          <label htmlFor="edit-name" className="mb-1 block text-sm font-medium">
+            Name
+          </label>
+          <input
+            id="edit-name"
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Automation name"
+            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            disabled={updateMutation.isPending}
+          />
+        </div>
+        <div className="flex gap-2">
+          <Button
+            type="button"
+            onClick={handleSave}
+            disabled={updateMutation.isPending}
+          >
+            {updateMutation.isPending ? "Saving…" : "Save"}
+          </Button>
+          <Button variant="outline" size="sm" asChild>
+            <Link href="/">Cancel</Link>
+          </Button>
+        </div>
+      </div>
+      {saveError && (
+        <p className="mb-4 text-sm text-destructive">{saveError}</p>
+      )}
       <FlowEditor
+        ref={editorRef}
+        key={id}
         initialNodes={nodes}
         initialEdges={edges}
         automationId={automation._id}
-        automationName={automation.name}
+        automationName={name || automation.name}
       />
     </div>
   );
