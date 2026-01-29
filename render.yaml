@@ -1,0 +1,19 @@
+# Render Blueprint: backend only (monorepo root = repo root, backend in back-end/)
+# Use with: New → Blueprint → connect this repo → Apply, then set env vars when prompted.
+services:
+  - type: web
+    name: automation-flow-builder-api
+    runtime: node
+    rootDir: back-end
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: MONGODB_URI
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: CORS_ORIGIN
+        sync: false
+      - key: FROM_EMAIL
+        sync: false
