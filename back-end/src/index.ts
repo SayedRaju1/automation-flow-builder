@@ -2,6 +2,7 @@ import "dotenv/config";
 import cors from "cors";
 import express from "express";
 import { connectDb } from "./lib/db";
+import automationsRouter from "./routes/automations";
 
 const app = express();
 const PORT = process.env.PORT ?? 4000;
@@ -12,6 +13,8 @@ app.use(express.json());
 app.get("/health", (_req, res) => {
   res.json({ status: "ok" });
 });
+
+app.use("/api/automations", automationsRouter);
 
 async function start() {
   await connectDb();
