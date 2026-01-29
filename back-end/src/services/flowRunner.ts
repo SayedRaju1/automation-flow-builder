@@ -57,7 +57,11 @@ export async function runFlow(
     return;
   }
   const nextMap = buildNextMap(flowData);
-  const startNode = nodes.find((n) => String(n.type).toLowerCase() === "start");
+  const startNode = nodes.find(
+    (n) =>
+      String(n.type).toLowerCase() === "start" ||
+      String(n.type).toLowerCase() === "input",
+  );
   if (!startNode) {
     return;
   }
@@ -66,7 +70,7 @@ export async function runFlow(
     const node = getNodeById(nodes, currentId);
     if (!node) break;
     const type = String(node.type).toLowerCase();
-    if (type === "end") {
+    if (type === "end" || type === "output") {
       break;
     }
     if (type === "action") {
