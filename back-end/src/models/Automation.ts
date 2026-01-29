@@ -27,8 +27,6 @@ const automationSchema = new Schema<IAutomation>(
   { timestamps: true },
 );
 
-automationSchema.index({ name: 1 }, { unique: true });
-
 export const Automation = mongoose.model<IAutomation>(
   "Automation",
   automationSchema,

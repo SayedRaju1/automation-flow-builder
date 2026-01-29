@@ -26,13 +26,17 @@ export async function sendEmail(options: SendEmailOptions): Promise<void> {
   const { to, subject, text, html } = options;
   const resend = getResendClient();
   const from = getFromEmail();
-  const { error } = await resend.emails.send({
+  // Resend API accepts text and/or html; SDK types use a union that can require 'react', so we assert.
+  const payload = {
     from,
     to,
     subject,
-    ...(html ? { html } : {}),
-    ...(text ? { text } : {}),
-  });
+    html: html ?? text ?? "",
+    text: text ?? html ?? "",
+  };
+  const { error } = await resend.emails.send(
+    payload as Parameters<typeof resend.emails.send>[0],
+  );
   if (error) {
     throw new Error(`Resend send failed: ${JSON.stringify(error)}`);
   }

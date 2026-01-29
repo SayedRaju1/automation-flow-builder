@@ -15,5 +15,10 @@ export const updateAutomationSchema = z.object({
   flowData: flowDataSchema.optional(),
 });
 
+export const testRunSchema = z.object({
+  email: z.string().email("Valid email is required"),
+});
+
 export type CreateAutomationBody = z.infer<typeof createAutomationSchema>;
 export type UpdateAutomationBody = z.infer<typeof updateAutomationSchema>;
+export type TestRunBody = z.infer<typeof testRunSchema>;

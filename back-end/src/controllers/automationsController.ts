@@ -1,8 +1,11 @@
 import { Request, Response } from "express";
 import mongoose from "mongoose";
 import { Automation } from "../models/Automation";
+import { runFlow } from "../services/flowRunner";
+import type { FlowData } from "../types/flow";
 import {
   createAutomationSchema,
+  testRunSchema,
   updateAutomationSchema,
 } from "../validators/automation";
 
@@ -124,5 +127,41 @@ export async function remove(req: Request, res: Response): Promise<void> {
   } catch (err) {
     console.error("Delete automation error:", err);
     res.status(500).json({ error: "Failed to delete automation" });
+  }
+}
+
+export async function testRun(req: Request, res: Response): Promise<void> {
+  const { id } = req.params;
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    res.status(400).json({ error: "Invalid automation ID" });
+    return;
+  }
+  const parsed = testRunSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({
+      error: "Validation failed",
+      details: parsed.error.flatten().fieldErrors,
+    });
+    return;
+  }
+  const { email } = parsed.data;
+  try {
+    const doc = await Automation.findById(id).lean();
+    if (!doc) {
+      res.status(404).json({ error: "Automation not found" });
+      return;
+    }
+    const raw = doc.flowData as { nodes?: unknown[]; edges?: unknown[] } | null;
+    const flowData: FlowData = {
+      nodes: (Array.isArray(raw?.nodes) ? raw.nodes : []) as FlowData["nodes"],
+      edges: (Array.isArray(raw?.edges) ? raw.edges : []) as FlowData["edges"],
+    };
+    runFlow(flowData, { recipientEmail: email }).catch((err) => {
+      console.error("Test run error:", err);
+    });
+    res.status(200).json({ message: "Test started" });
+  } catch (err) {
+    console.error("Test run error:", err);
+    res.status(500).json({ error: "Failed to start test run" });
   }
 }
