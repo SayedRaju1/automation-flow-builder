@@ -11,6 +11,7 @@ import {
 } from "@/components/flow-editor/FlowEditor";
 import { getAutomation, updateAutomation } from "@/lib/api";
 import { DEFAULT_EDGES, DEFAULT_NODES } from "@/lib/default-flow";
+import { validateFlowDataForSave } from "@/lib/validate-flow";
 import type { Node, Edge } from "reactflow";
 
 function flowDataToNodesEdges(flowData: {
@@ -123,6 +124,11 @@ export default function EditAutomationPage() {
     }
     const flowData = editorRef.current?.getFlowData();
     if (!flowData) return;
+    const validationError = validateFlowDataForSave(flowData);
+    if (validationError) {
+      setSaveError(validationError);
+      return;
+    }
     updateMutation.mutate({ name: trimmed, flowData });
   };
 

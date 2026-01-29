@@ -2,7 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   deleteAutomation,
@@ -31,11 +31,12 @@ function TestRunDialog({
 }) {
   const [email, setEmail] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
   const mutation = useMutation({
     mutationFn: () => testRunAutomation(automationId, { email }),
     onSuccess: () => {
+      setSuccess(true);
       onSuccess();
-      onClose();
     },
     onError: (err: unknown) => {
       const e = err as {
@@ -57,6 +58,32 @@ function TestRunDialog({
     }
     mutation.mutate();
   };
+
+  useEffect(() => {
+    if (!success) return;
+    const t = setTimeout(() => onClose(), 1500);
+    return () => clearTimeout(t);
+  }, [success, onClose]);
+
+  if (success) {
+    return (
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="test-run-title"
+      >
+        <div className="w-full max-w-md rounded-lg border border-border bg-background p-6 shadow-lg">
+          <p
+            id="test-run-title"
+            className="text-center font-medium text-primary"
+          >
+            Test started! The automation is running in the background.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -200,7 +227,7 @@ export default function HomePage() {
                           onClick={() => handleDelete(item)}
                           disabled={deleteMutation.isPending}
                         >
-                          Delete
+                          {deleteMutation.isPending ? "Deleting…" : "Delete"}
                         </Button>
                       </span>
                     </td>

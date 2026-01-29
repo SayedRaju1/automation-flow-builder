@@ -11,6 +11,7 @@ import {
 } from "@/components/flow-editor/FlowEditor";
 import { createAutomation } from "@/lib/api";
 import { DEFAULT_EDGES, DEFAULT_NODES } from "@/lib/default-flow";
+import { validateFlowDataForSave } from "@/lib/validate-flow";
 
 export default function NewAutomationPage() {
   const router = useRouter();
@@ -40,6 +41,11 @@ export default function NewAutomationPage() {
     }
     const flowData = editorRef.current?.getFlowData();
     if (!flowData) return;
+    const validationError = validateFlowDataForSave(flowData);
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
     createMutation.mutate({ name: trimmed, flowData });
   };
 
