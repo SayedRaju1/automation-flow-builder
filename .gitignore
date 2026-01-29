@@ -1,0 +1,35 @@
+# Plan document (local planning only)
+PLAN.md
+*.plan.md
+
+# Dependencies
+node_modules/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Build outputs
+dist/
+build/
+.next/
+out/
+
+# Logs and debug
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Misc
+*.tsbuildinfo
+.cache/
