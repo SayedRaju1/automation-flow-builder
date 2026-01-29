@@ -1,5 +1,10 @@
 import { cva, type VariantProps } from "class-variance-authority";
-import { forwardRef } from "react";
+import {
+  cloneElement,
+  forwardRef,
+  isValidElement,
+  type ReactElement,
+} from "react";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
@@ -34,17 +39,29 @@ const buttonVariants = cva(
 export interface ButtonProps
   extends
     React.ButtonHTMLAttributes<HTMLButtonElement>,
-    VariantProps<typeof buttonVariants> {}
+    VariantProps<typeof buttonVariants> {
+  asChild?: boolean;
+}
 
 const Button = forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant, size, ...props }, ref) => {
-    return (
-      <button
-        className={cn(buttonVariants({ variant, size, className }))}
-        ref={ref}
-        {...props}
-      />
-    );
+  ({ className, variant, size, asChild = false, ...props }, ref) => {
+    const computedClassName = cn(buttonVariants({ variant, size, className }));
+    if (asChild && isValidElement(props.children)) {
+      return cloneElement(
+        props.children as ReactElement<{
+          className?: string;
+          ref?: React.Ref<unknown>;
+        }>,
+        {
+          className: cn(
+            computedClassName,
+            (props.children as ReactElement).props?.className,
+          ),
+          ref,
+        },
+      );
+    }
+    return <button className={computedClassName} ref={ref} {...props} />;
   },
 );
 Button.displayName = "Button";

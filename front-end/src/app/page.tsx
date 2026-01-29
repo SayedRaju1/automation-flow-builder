@@ -1,87 +1,225 @@
-import Image from "next/image";
+"use client";
+
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import Link from "next/link";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import {
+  deleteAutomation,
+  listAutomations,
+  testRunAutomation,
+} from "@/lib/api";
+import type { Automation } from "@/types/automation";
 
-export default function Home() {
+function formatDate(iso: string): string {
+  return new Intl.DateTimeFormat("en-US", {
+    dateStyle: "short",
+    timeStyle: "short",
+  }).format(new Date(iso));
+}
+
+function TestRunDialog({
+  automationId,
+  automationName,
+  onClose,
+  onSuccess,
+}: {
+  automationId: string;
+  automationName: string;
+  onClose: () => void;
+  onSuccess: () => void;
+}) {
+  const [email, setEmail] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const mutation = useMutation({
+    mutationFn: () => testRunAutomation(automationId, { email }),
+    onSuccess: () => {
+      onSuccess();
+      onClose();
+    },
+    onError: (err: unknown) => {
+      const e = err as {
+        response?: { data?: { details?: Record<string, string[]> } };
+        message?: string;
+      };
+      const details = e.response?.data?.details;
+      const msg = details?.email?.[0] ?? e.message ?? "Failed to start test";
+      setError(String(msg));
+    },
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    if (!email.trim()) {
+      setError("Email is required");
+      return;
+    }
+    mutation.mutate();
+  };
+
   return (
-    <div className="flex min-h-screen flex-col items-center gap-12 bg-zinc-50 p-8 font-sans dark:bg-black">
-      {/* Existing Next.js content */}
-      <main className="flex w-full max-w-3xl flex-col items-center gap-8">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="test-run-title"
+    >
+      <div className="w-full max-w-md rounded-lg border border-border bg-background p-6 shadow-lg">
+        <h2 id="test-run-title" className="mb-2 text-lg font-semibold">
+          Test run: {automationName}
+        </h2>
+        <p className="mb-4 text-sm text-muted-foreground">
+          Enter the email address to run this automation.
+        </p>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label
+              htmlFor="test-email"
+              className="mb-1 block text-sm font-medium"
             >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-
-        {/* Tailwind + shadcn verification (remove before real feature work) */}
-        <section
-          className="w-full max-w-md rounded-xl border-2 border-emerald-500 bg-emerald-50 p-6 shadow-md dark:border-emerald-700 dark:bg-emerald-950/30"
-          aria-label="Tailwind and shadcn verification"
-        >
-          <h2 className="mb-3 text-lg font-semibold text-emerald-800 dark:text-emerald-200">
-            Tailwind + shadcn check
-          </h2>
-          <p className="mb-4 text-sm text-emerald-700 dark:text-emerald-300">
-            If you see a green box and styled buttons below, Tailwind and shadcn
-            are working.
-          </p>
-          <div className="flex flex-wrap gap-3">
-            <Button>shadcn default</Button>
-            <Button variant="outline">shadcn outline</Button>
-            <Button variant="destructive">destructive</Button>
-          </div>
-        </section>
-
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:opacity-90 md:w-[158px]"
-            href="https://vercel.com/new"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
+              Email
+            </label>
+            <input
+              id="test-email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              placeholder="you@example.com"
+              autoFocus
+              disabled={mutation.isPending}
             />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-white/[.08] md:w-[158px]"
-            href="https://nextjs.org/docs"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+            {error && <p className="mt-1 text-sm text-destructive">{error}</p>}
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="outline" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={mutation.isPending}>
+              {mutation.isPending ? "Starting…" : "Start test"}
+            </Button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+export default function HomePage() {
+  const queryClient = useQueryClient();
+  const [testRunTarget, setTestRunTarget] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
+
+  const {
+    data: automations,
+    isLoading,
+    error,
+  } = useQuery({
+    queryKey: ["automations"],
+    queryFn: listAutomations,
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: deleteAutomation,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["automations"] });
+    },
+  });
+
+  const handleDelete = (item: Automation) => {
+    if (!window.confirm(`Delete "${item.name}"? This cannot be undone.`))
+      return;
+    deleteMutation.mutate(item._id);
+  };
+
+  return (
+    <div className="min-h-screen bg-background p-6">
+      <div className="mx-auto max-w-4xl">
+        <div className="mb-6 flex items-center justify-between">
+          <h1 className="text-2xl font-semibold">Automations</h1>
+          <Button asChild>
+            <Link href="/automations/new">Create new</Link>
+          </Button>
         </div>
-      </main>
+
+        {isLoading && (
+          <p className="text-muted-foreground">Loading automations…</p>
+        )}
+        {error && (
+          <p className="text-destructive">
+            Failed to load automations. Please try again.
+          </p>
+        )}
+        {automations && automations.length === 0 && (
+          <p className="text-muted-foreground">
+            No automations yet. Create one to get started.
+          </p>
+        )}
+        {automations && automations.length > 0 && (
+          <div className="overflow-hidden rounded-md border border-border">
+            <table className="w-full text-left text-sm">
+              <thead className="border-b border-border bg-muted/50">
+                <tr>
+                  <th className="px-4 py-3 font-medium">Name</th>
+                  <th className="px-4 py-3 font-medium">Updated</th>
+                  <th className="px-4 py-3 font-medium text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {automations.map((item) => (
+                  <tr
+                    key={item._id}
+                    className="border-b border-border last:border-0"
+                  >
+                    <td className="px-4 py-3 font-medium">{item.name}</td>
+                    <td className="px-4 py-3 text-muted-foreground">
+                      {formatDate(item.updatedAt)}
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <span className="inline-flex gap-2">
+                        <Button variant="outline" size="sm" asChild>
+                          <Link href={`/automations/${item._id}/edit`}>
+                            Edit
+                          </Link>
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() =>
+                            setTestRunTarget({ id: item._id, name: item.name })
+                          }
+                        >
+                          Test
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => handleDelete(item)}
+                          disabled={deleteMutation.isPending}
+                        >
+                          Delete
+                        </Button>
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {testRunTarget && (
+        <TestRunDialog
+          automationId={testRunTarget.id}
+          automationName={testRunTarget.name}
+          onClose={() => setTestRunTarget(null)}
+          onSuccess={() => {}}
+        />
+      )}
     </div>
   );
 }
