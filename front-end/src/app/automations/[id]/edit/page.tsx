@@ -11,6 +11,7 @@ import {
 } from "@/components/flow-editor/FlowEditor";
 import { getAutomation, updateAutomation } from "@/lib/api";
 import { DEFAULT_EDGES, DEFAULT_NODES } from "@/lib/default-flow";
+import type { UpdateAutomationInput } from "@/types/automation";
 import { validateFlowDataForSave } from "@/lib/validate-flow";
 import type { Node, Edge } from "reactflow";
 
@@ -65,10 +66,8 @@ export default function EditAutomationPage() {
   }, [automation?.name]);
 
   const updateMutation = useMutation({
-    mutationFn: (payload: {
-      name: string;
-      flowData: { nodes: unknown[]; edges: unknown[] };
-    }) => updateAutomation(id, payload),
+    mutationFn: (payload: UpdateAutomationInput) =>
+      updateAutomation(id, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["automations"] });
       queryClient.invalidateQueries({ queryKey: ["automation", id] });
