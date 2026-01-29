@@ -77,7 +77,7 @@ export function DelayNode({ id, data }: NodeProps<DelayNodeData>) {
                 relativeValue: Math.max(0, parseInt(e.target.value, 10) || 0),
               })
             }
-            className="w-16 rounded border border-input bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            className="no-spinner w-16 rounded border border-input bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
           />
           <select
             value={relativeUnit}

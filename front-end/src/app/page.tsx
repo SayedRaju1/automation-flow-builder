@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 import {
   deleteAutomation,
   listAutomations,
@@ -139,6 +140,7 @@ export default function HomePage() {
     id: string;
     name: string;
   } | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Automation | null>(null);
 
   const {
     data: automations,
@@ -153,13 +155,16 @@ export default function HomePage() {
     mutationFn: deleteAutomation,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["automations"] });
+      setDeleteTarget(null);
     },
   });
 
-  const handleDelete = (item: Automation) => {
-    if (!window.confirm(`Delete "${item.name}"? This cannot be undone.`))
-      return;
-    deleteMutation.mutate(item._id);
+  const handleDeleteClick = (item: Automation) => {
+    setDeleteTarget(item);
+  };
+
+  const handleDeleteConfirm = () => {
+    if (deleteTarget) deleteMutation.mutate(deleteTarget._id);
   };
 
   return (
@@ -224,7 +229,7 @@ export default function HomePage() {
                         <Button
                           variant="destructive"
                           size="sm"
-                          onClick={() => handleDelete(item)}
+                          onClick={() => handleDeleteClick(item)}
                           disabled={deleteMutation.isPending}
                         >
                           {deleteMutation.isPending ? "Deleting…" : "Delete"}
@@ -247,6 +252,22 @@ export default function HomePage() {
           onSuccess={() => {}}
         />
       )}
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        title="Delete automation"
+        description={
+          deleteTarget
+            ? `Delete "${deleteTarget.name}"? This cannot be undone.`
+            : ""
+        }
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        variant="destructive"
+        loading={deleteMutation.isPending}
+        onConfirm={handleDeleteConfirm}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   );
 }
